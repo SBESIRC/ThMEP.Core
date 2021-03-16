@@ -32,6 +32,10 @@ function Get-LatestMsbuildLocation
     return $msbuildLocation
 }
 
+Task Requires.Confuser {
+    $Script:confuserEx = "..\Tools\ConfuserEx\Confuser.CLI.exe"
+}
+
 Task Requires.MSBuild {
     $script:msbuildExe = Get-LatestMsbuildLocation
 
@@ -51,11 +55,23 @@ Task Compile.Core.R18 -Depends Requires.MSBuild {
     }
 }
 
+Task Confuser.Core.R18 -Depends Requires.Confuser, Compile.Core.R18  {
+    exec {
+        & $Script:confuserEx -n "ThMEPCore.Release.crproj"
+    }
+}
+
 # $buildType build for AutoCAD R19
 Task Compile.Core.R19 -Depends Requires.MSBuild {
     exec {
         & $msbuildExe /verbosity:minimal /property:OutDir="..\build\bin\${buildType}-NET40\",IntermediateOutputPath="..\build\obj\${buildType}-NET40\" ".\ThMEPCore.sln" /p:Configuration="${buildType}-NET40" /t:restore
         & $msbuildExe /verbosity:minimal /property:OutDir="..\build\bin\${buildType}-NET40\",IntermediateOutputPath="..\build\obj\${buildType}-NET40\" ".\ThMEPCore.sln" /p:Configuration="${buildType}-NET40" /t:rebuild
+    }
+}
+
+Task Confuser.Core.R19 -Depends Requires.Confuser, Compile.Core.R19 {
+    exec {
+        & $Script:confuserEx -n "ThMEPCore.Release-NET40.crproj"
     }
 }
 
@@ -67,11 +83,23 @@ Task Compile.Core.R20 -Depends Requires.MSBuild {
     }
 }
 
+Task Confuser.Core.R20 -Depends Requires.Confuser, Compile.Core.R20 {
+    exec {
+        & $Script:confuserEx -n "ThMEPCore.Release-NET45.crproj"
+    }
+}
+
 # $buildType build for AutoCAD R22
 Task Compile.Core.R22 -Depends Requires.MSBuild {
     exec {
         & $msbuildExe /verbosity:minimal /property:OutDir="..\build\bin\${buildType}-NET46\",IntermediateOutputPath="..\build\obj\${buildType}-NET46\" ".\ThMEPCore.sln" /p:Configuration="${buildType}-NET46" /t:restore
         & $msbuildExe /verbosity:minimal /property:OutDir="..\build\bin\${buildType}-NET46\",IntermediateOutputPath="..\build\obj\${buildType}-NET46\" ".\ThMEPCore.sln" /p:Configuration="${buildType}-NET46" /t:rebuild
+    }
+}
+
+Task Confuser.Core.R22 -Depends Requires.Confuser, Compile.Core.R22 {
+    exec {
+        & $Script:confuserEx -n "ThMEPCore.Release-NET46.crproj"
     }
 }
 
@@ -84,6 +112,11 @@ Task Requires.BuildType {
 }
 
 Task Compile.Core -Depends Requires.BuildType, Compile.Core.R18, Compile.Core.R19, Compile.Core.R20, Compile.Core.R22
+{
+
+}
+
+Task Confuser.Core -Depends Confuser.Core.R18, Confuser.Core.R19, Confuser.Core.R20, Confuser.Core.R22
 {
 
 }
