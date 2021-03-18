@@ -1,17 +1,18 @@
-﻿using ThCADExtension;
-using Autodesk.AutoCAD.Geometry;
+﻿using System.Linq;
 using System.Collections.Generic;
-using Autodesk.AutoCAD.DatabaseServices;
+using ThCADExtension;
 using ThMEPEngineCore.CAD;
 using ThMEPEngineCore.Algorithm;
+using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.DatabaseServices;
 
 namespace ThMEPEngineCore.Engine
 {
-    public class ThRoomExtractionVisitor : ThBuildingElementExtractionVisitor
+    public class ThSlabExtractionVisitor : ThBuildingElementExtractionVisitor
     {
         public override void DoExtract(List<ThRawIfcBuildingElementData> elements, Entity dbObj, Matrix3d matrix)
         {
-            if (dbObj is Polyline polyline)
+            if(dbObj is Polyline polyline)
             {
                 elements.AddRange(Handle(polyline, matrix));
             }
@@ -29,37 +30,37 @@ namespace ThMEPEngineCore.Engine
 
         private List<ThRawIfcBuildingElementData> Handle(Polyline polyline, Matrix3d matrix)
         {
-            var results = new List<ThRawIfcBuildingElementData>();
+            List<Curve> curves = new List<Curve>();
             if (IsBuildElement(polyline) && CheckLayerValid(polyline))
             {
                 var clone = polyline.WashClone();
                 clone.TransformBy(matrix);
-                results.Add(CreateBuildingElementData(clone, polyline.Hyperlinks[0].Description));
+                curves.Add(clone);
             }
-            return results;
-        }
-
-        private ThRawIfcBuildingElementData CreateBuildingElementData(Curve curve, string description)
-        {
-            return new ThRawIfcBuildingElementData()
-            {
-                Geometry = curve,
-                Data = description
-            };
+            return curves.Select(o => CreateBuildingElementData(o)).ToList();
         }
 
         public override bool IsBuildElement(Entity entity)
         {
             if (entity.Hyperlinks.Count > 0)
             {
-                var thPropertySet = ThPropertySet.CreateWithHyperlink2(entity.Hyperlinks[0].Description);
-                if (thPropertySet.Properties.ContainsKey(ThMEPEngineCoreCommon.BUILDELEMENT_PROPERTY_CATEGORY) &&
-                    thPropertySet.Properties.ContainsKey(ThMEPEngineCoreCommon.BUILDELEMENT_PROPERTY_Boundary))
-                {
-                    return true;
-                }
+                var thPropertySet = ThPropertySet.CreateWithHyperlink(entity.Hyperlinks[0].Description);
+                return thPropertySet.IsSlab;
             }
             return false;
+        }
+
+        public override bool CheckLayerValid(Entity curve)
+        {
+            return true;
+        }
+
+        private ThRawIfcBuildingElementData CreateBuildingElementData(Curve curve)
+        {
+            return new ThRawIfcBuildingElementData()
+            {
+                Geometry = curve,
+            };
         }
     }
 }
